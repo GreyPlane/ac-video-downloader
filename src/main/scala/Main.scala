@@ -152,6 +152,14 @@ object Main
         metavar = "file"
       )
       .withDefault(Path("./cookies"))
+    val parallelismOpts = Opts
+      .option[Int](
+        long = "parallelism",
+        help = "maximum parallelism of downloading",
+        short = "p"
+      )
+      .withDefault(2)
+      .validate("Do NOT set this number too high!")(_ < 5)
 
     val inputConfigOpts: Opts[InputConfig] = videoAcNumOpts.map(
       InputConfig.Video
@@ -161,8 +169,9 @@ object Main
       outputOpts,
       inputConfigOpts,
       qualityTypeOpts,
-      cookiesOpts
-    ).mapN { case (output, input, qualityType, cookiesPath) =>
+      cookiesOpts,
+      parallelismOpts
+    ).mapN { case (output, input, qualityType, cookiesPath, parallelism) =>
       useIOClient { implicit client =>
         readCookie(cookiesPath)
           .flatMap(cookie => {
@@ -189,7 +198,9 @@ object Main
             } yield done
 
             def downloadVideos(acs: List[String]) =
-              Concurrent[IO].parTraverseN(2)(acs)(downloadVideo) *> IO.unit
+              Concurrent[IO].parTraverseN(parallelism)(acs)(
+                downloadVideo
+              ) *> IO.unit
 
             val done = input match {
               case InputConfig.Album(albumAcNum) => {
