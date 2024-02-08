@@ -196,10 +196,10 @@ object Main
                 for {
                   albumHTML <- acfun.getAlbumHTML(albumAcNum)
                   albumContentInfos <- extractAlbumInfo(albumHTML).liftTo[IO]
-                  _ <- downloadVideos(
+                  done <- downloadVideos(
                     albumContentInfos.map(info => s"ac${info.resourceId}")
                   )
-                } yield ()
+                } yield done
 
               }
               case InputConfig.Video(videoAcNums) => {
