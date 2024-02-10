@@ -158,15 +158,12 @@ object Main extends EpollApp {
       helpFlag = false
     )(main)
 
-    def printHelp[F[_]: Console: Functor](help: Help): F[ExitCode] =
-      Console[F].errorln(help).as {
+    def printHelp(help: Help): IO[ExitCode] =
+      Console[IO].errorln(help).as {
         if (help.errors.nonEmpty) ExitCode.Error
         else ExitCode.Success
       }
 
-    cmd.parse(args, sys.env) match {
-      case Left(help) => printHelp[IO](help)
-      case Right(f)   => f
-    }
+    cmd.parse(args, sys.env).fold(printHelp, identity)
   }
 }
