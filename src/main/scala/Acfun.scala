@@ -3,8 +3,8 @@ import cats.effect._
 import cats.effect.std.Console
 import cats.implicits._
 import cats.tagless.{ApplyK, Derive}
-import cats.{ApplicativeThrow, Monad, MonadThrow}
-import data.QualityType
+import cats.{Monad, MonadThrow}
+import data.{QualityType, UnexpectedResult}
 import fs2.io.file.{Files, Path}
 import m3u8.MediaPlaylist
 import org.http4s._
@@ -68,12 +68,7 @@ object Acfun {
     def getPlaylist(ac: String, url: Uri): F[MediaPlaylist] = {
       cli
         .expect[String](url)
-        .flatMap(m3u8Data =>
-          MediaPlaylist
-            .parse(m3u8Data)
-            .leftMap(error => new IllegalArgumentException(error.toString()))
-            .liftTo[F]
-        )
+        .flatMap(MediaPlaylist.parseF[F])
     }
 
     def downloadFullVideo(
@@ -117,7 +112,7 @@ object Acfun {
           .ifM(
             Monad[F].pure(),
             MonadThrow[F].raiseError(
-              new IllegalArgumentException(s"$outputDir is not a directory")
+              UnexpectedResult(s"$outputDir is not a directory")
             )
           )
         target = why / fileName
@@ -152,7 +147,7 @@ object Acfun {
     }
   }
 
-  private class AcfunCache[F[_]: Async: ApplicativeThrow](cache: Cache[F])
+  private class AcfunCache[F[_]: Async: MonadThrow](cache: Cache[F])
       extends Acfun[Mid[F, *]] {
 
     def getPageHTML(ac: String): Mid[F, String] = { fa =>
@@ -168,12 +163,7 @@ object Acfun {
       cache.getOrLoad(
         ac + "-m3u8",
         () => fa,
-        Kleisli { str =>
-          MediaPlaylist
-            .parse(str)
-            .leftMap(error => new IllegalArgumentException(error.toString()))
-            .liftTo[F]
-        },
+        Kleisli(MediaPlaylist.parseF[F]),
         Kleisli.fromFunction[F, MediaPlaylist](_.show)
       )
     }

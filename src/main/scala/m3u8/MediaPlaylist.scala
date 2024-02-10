@@ -1,14 +1,19 @@
 package m3u8
 
-import cats.Show
+import cats.{MonadThrow, Show}
 import cats.data.NonEmptyList
 import cats.implicits._
+import data.UnexpectedResult
 
 case class MediaPlaylist(segments: NonEmptyList[Segment])
 
 object MediaPlaylist {
   def parse(raw: String): Either[cats.parse.Parser.Error, MediaPlaylist] = {
     Parser.mediaPlaylist.parseAll(raw)
+  }
+
+  def parseF[F[_]: MonadThrow](raw: String): F[MediaPlaylist] = {
+    parse(raw).leftMap(error => UnexpectedResult(error.show)).liftTo[F]
   }
 
   def unsafeParse(raw: String): MediaPlaylist = {
