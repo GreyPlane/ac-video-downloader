@@ -46,7 +46,7 @@ nativeConfig ~= { c =>
   linkingConfig
     .withLTO(LTO.none) // thin
     .withMode(Mode.debug) // releaseFast
-    .withGC(GC.immix) // commix
+    .withGC(GC.none) // commix
 
 }
 envVars ++= {

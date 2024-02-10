@@ -15,15 +15,7 @@ import org.http4s.headers._
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.noop.NoOpFactory
 
-object Main
-    extends EpollApp
-//  extends CommandIOApp(
-//    name = "AC Video Download",
-//    header = "download video through ac number or album number",
-//    version = "1.0"
-//  )
-//
-    {
+object Main extends EpollApp {
 
   private def useIOClient[B](f: Client[IO] => IO[B]): IO[B] = {
     implicit val loggerFactory: LoggerFactory[IO] = NoOpFactory.impl[IO]
@@ -48,7 +40,7 @@ object Main
     .map(Cookie.parse)
     .flatMap(_.liftTo[IO])
 
-  def main: Opts[IO[ExitCode]] = {
+  private def main: Opts[IO[ExitCode]] = {
     val outputOpts = Opts.option[Path](
       long = "output",
       help = "downloaded video will be here",
@@ -160,7 +152,11 @@ object Main
   }
 
   def run(args: List[String]): IO[ExitCode] = {
-    val cmd = Command("a", "b", helpFlag = false)(main)
+    val cmd = Command(
+      "AC Video Download",
+      "download video through ac number or album number",
+      helpFlag = false
+    )(main)
 
     def printHelp[F[_]: Console: Functor](help: Help): F[ExitCode] =
       Console[F].errorln(help).as {
