@@ -31,7 +31,6 @@ lazy val root = (project in file("."))
       "tf.tofu" %% "tofu-core-higher-kind" % tofuVersion,
       "org.typelevel" %% "log4cats-slf4j" % "2.6.0",
       "com.monovore" %% "decline" % "2.4.1",
-      "com.monovore" %% "decline-effect" % "2.4.1",
-      "io.lindstrom" % "m3u8-parser" % "0.27"
+      "com.monovore" %% "decline-effect" % "2.4.1"
     )
   )

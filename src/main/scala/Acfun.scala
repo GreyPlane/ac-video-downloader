@@ -5,16 +5,13 @@ import cats.tagless.{ApplyK, Derive}
 import cats.{Monad, MonadThrow}
 import data.QualityType
 import fs2.io.file.{Files, Path}
-import io.lindstrom.m3u8.model._
-import io.lindstrom.m3u8.parser.MediaPlaylistParser
+import m3u8.MediaPlaylist
 import monocle.Iso
 import org.http4s._
 import org.http4s.client.Client
 import org.http4s.headers.{Accept, Cookie}
 import org.typelevel.ci.CIStringSyntax
 import tofu.higherKind.Mid
-
-import scala.util.Try
 
 trait Acfun[F[_]] {
   def getPageHTML(ac: String): F[String]
@@ -35,10 +32,8 @@ trait Acfun[F[_]] {
 object Acfun {
   private implicit def applyK: ApplyK[Acfun] = Derive.applyK[Acfun]
 
-  private val m3u8Parser = new MediaPlaylistParser()
-  private val iso = Iso[String, MediaPlaylist](m3u8Parser.readPlaylist)(
-    m3u8Parser.writePlaylistAsString
-  )
+  private val iso =
+    Iso[String, MediaPlaylist](MediaPlaylist.unsafeParse)(_.show)
 
   private def resolveTideSymbol[F[_]: Async](path: Path): F[Path] = {
     if (path.startsWith("~")) {
@@ -76,7 +71,12 @@ object Acfun {
     def getPlaylist(ac: String, url: Uri): F[MediaPlaylist] = {
       cli
         .expect[String](url)
-        .flatMap(m3u8Data => Try(m3u8Parser.readPlaylist(m3u8Data)).liftTo[F])
+        .flatMap(m3u8Data =>
+          MediaPlaylist
+            .parse(m3u8Data)
+            .leftMap(error => new IllegalArgumentException(error.toString()))
+            .liftTo[F]
+        )
     }
 
     def downloadFullVideo(
@@ -86,10 +86,9 @@ object Acfun {
         outputDir: Path,
         qualityType: QualityType
     ): F[Unit] = {
-      import scala.jdk.CollectionConverters._
 
-      def constructSegmentUrl(segment: MediaSegment): Uri = {
-        val partial = Uri.fromString(segment.uri()).toOption.get
+      def constructSegmentUrl(segment: m3u8.Segment): Uri = {
+        val partial = Uri.fromString(segment.uri).toOption.get
         val path =
           mainPageUrl.path
             .splitAt(mainPageUrl.path.segments.length - 1)
@@ -106,9 +105,7 @@ object Acfun {
         .stream(Request(Method.GET, url))
         .flatMap(_.body)
 
-      val videoStream = playlist
-        .mediaSegments()
-        .asScala
+      val videoStream = playlist.segments
         .map(constructSegmentUrl)
         .toList
         .map(requestVideoSegment)
