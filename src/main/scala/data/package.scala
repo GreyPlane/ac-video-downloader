@@ -1,11 +1,12 @@
-import cats.data.NonEmptyList
+import cats.implicits._
+import io.circe.generic.semiauto._
+import io.circe.syntax._
 import io.circe.{Decoder, DecodingFailure, Encoder}
 import org.http4s.Uri
-import cats.implicits._
-import io.circe.syntax._
-import io.circe.generic.semiauto._
 
 package object data {
+  case class UnexpectedResult(message: String = "") extends Exception(message)
+
   case class TranscodeInfo(
       qualityType: QualityType,
       sizeInBytes: Long,
@@ -38,11 +39,4 @@ package object data {
     implicit def videoInfoDecoder: Decoder[VideoInfo] = deriveDecoder[VideoInfo]
   }
 
-  case class PageInfo(
-      title: String,
-      videoInfos: NonEmptyList[VideoInfo],
-      transcodeInfos: NonEmptyList[TranscodeInfo]
-  )
-
-  case class AlbumContentInfo(resourceId: Long, title: String)
 }

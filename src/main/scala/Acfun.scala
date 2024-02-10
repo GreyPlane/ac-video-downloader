@@ -1,12 +1,12 @@
+import cats.data.Kleisli
 import cats.effect._
 import cats.effect.std.Console
 import cats.implicits._
 import cats.tagless.{ApplyK, Derive}
-import cats.{Monad, MonadThrow}
+import cats.{ApplicativeThrow, Monad, MonadThrow}
 import data.QualityType
 import fs2.io.file.{Files, Path}
 import m3u8.MediaPlaylist
-import monocle.Iso
 import org.http4s._
 import org.http4s.client.Client
 import org.http4s.headers.{Accept, Cookie}
@@ -31,9 +31,6 @@ trait Acfun[F[_]] {
 
 object Acfun {
   private implicit def applyK: ApplyK[Acfun] = Derive.applyK[Acfun]
-
-  private val iso =
-    Iso[String, MediaPlaylist](MediaPlaylist.unsafeParse)(_.show)
 
   private def resolveTideSymbol[F[_]: Async](path: Path): F[Path] = {
     if (path.startsWith("~")) {
@@ -155,15 +152,30 @@ object Acfun {
     }
   }
 
-  private class AcfunCache[F[_]: Async](cache: Cache[F])
+  private class AcfunCache[F[_]: Async: ApplicativeThrow](cache: Cache[F])
       extends Acfun[Mid[F, *]] {
 
     def getPageHTML(ac: String): Mid[F, String] = { fa =>
-      cache.getOrLoad[String](ac + "-page", () => fa, Iso.id)
+      cache.getOrLoad(
+        ac + "-page",
+        () => fa,
+        Kleisli { _.pure[F] },
+        Kleisli { _.pure[F] }
+      )
     }
 
     def getPlaylist(ac: String, url: Uri): Mid[F, MediaPlaylist] = { fa =>
-      cache.getOrLoad(ac + "-m3u8", () => fa, iso)
+      cache.getOrLoad(
+        ac + "-m3u8",
+        () => fa,
+        Kleisli { str =>
+          MediaPlaylist
+            .parse(str)
+            .leftMap(error => new IllegalArgumentException(error.toString()))
+            .liftTo[F]
+        },
+        Kleisli.fromFunction[F, MediaPlaylist](_.show)
+      )
     }
 
     def downloadFullVideo(
@@ -175,7 +187,12 @@ object Acfun {
     ): Mid[F, Unit] = { fa => fa }
 
     def getAlbumHTML(aa: String): Mid[F, String] = { fa =>
-      cache.getOrLoad(aa + "-album", () => fa, Iso.id)
+      cache.getOrLoad(
+        aa + "-album",
+        () => fa,
+        Kleisli { _.pure[F] },
+        Kleisli { _.pure[F] }
+      )
     }
   }
 

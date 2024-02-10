@@ -1,11 +1,16 @@
 import cats.MonadThrow
+import cats.data.Kleisli
 import cats.effect.Async
 import cats.implicits._
 import fs2.io.file._
-import monocle.Iso
 
 trait Cache[F[_]] {
-  def getOrLoad[T](key: String, load: () => F[T], iso: Iso[String, T]): F[T]
+  def getOrLoad[T](
+      key: String,
+      load: () => F[T],
+      from: Kleisli[F, String, T],
+      to: Kleisli[F, T, String]
+  ): F[T]
 }
 
 object Cache {
@@ -17,7 +22,12 @@ object Cache {
       tempDirPrefix: String,
       longRunning: Boolean = false
   ) extends Cache[F] {
-    def getOrLoad[T](key: String, load: () => F[T], iso: Iso[String, T]): F[T] =
+    def getOrLoad[T](
+        key: String,
+        load: () => F[T],
+        from: Kleisli[F, String, T],
+        to: Kleisli[F, T, String]
+    ): F[T] =
       for {
         tempDir <-
           if (longRunning)
@@ -26,12 +36,13 @@ object Cache {
         filePath = tempDir / key
         ifCached <- Files[F].exists(filePath)
         data <-
-          if (ifCached) Files[F].readUtf8(filePath).compile.string.map(iso.get)
+          if (ifCached)
+            Files[F].readUtf8(filePath).compile.string.flatMap(from.run)
           else
             load().flatMap(d =>
               fs2
                 .Stream(d)
-                .map(iso.reverseGet)
+                .evalMap(to.run)
                 .through(Files[F].writeUtf8(filePath))
                 .compile
                 .drain
