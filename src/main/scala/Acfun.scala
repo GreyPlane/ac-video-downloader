@@ -11,7 +11,6 @@ import org.http4s._
 import org.http4s.client.Client
 import org.http4s.headers.{Accept, Cookie}
 import org.typelevel.ci.CIStringSyntax
-import tofu.higherKind.Mid
 
 trait Acfun[F[_]] {
   def getPageHTML(ac: String): F[String]
@@ -44,7 +43,7 @@ object Acfun {
   def apply[F[_]: Async: Concurrent: MonadThrow: Console](cookie: Cookie)(
       implicit cli: Client[F]
   ): Acfun[F] = {
-    val cache: Acfun[Mid[F, *]] = new AcfunCache(Cache[F]("acfun-cache"))
+    val cache: Acfun[Middle[F, *]] = new AcfunCache(Cache[F]("acfun-cache"))
     cache.attach(new Impl[F](cookie))
   }
 
@@ -148,9 +147,9 @@ object Acfun {
   }
 
   private class AcfunCache[F[_]: Async: MonadThrow](cache: Cache[F])
-      extends Acfun[Mid[F, *]] {
+      extends Acfun[Middle[F, *]] {
 
-    def getPageHTML(ac: String): Mid[F, String] = { fa =>
+    def getPageHTML(ac: String): Middle[F, String] = Middle { fa =>
       cache.getOrLoad(
         ac + "-page",
         () => fa,
@@ -159,13 +158,14 @@ object Acfun {
       )
     }
 
-    def getPlaylist(ac: String, url: Uri): Mid[F, MediaPlaylist] = { fa =>
-      cache.getOrLoad(
-        ac + "-m3u8",
-        () => fa,
-        Kleisli(MediaPlaylist.parseF[F]),
-        Kleisli.fromFunction[F, MediaPlaylist](_.show)
-      )
+    def getPlaylist(ac: String, url: Uri): Middle[F, MediaPlaylist] = Middle {
+      fa =>
+        cache.getOrLoad(
+          ac + "-m3u8",
+          () => fa,
+          Kleisli(MediaPlaylist.parseF[F]),
+          Kleisli.fromFunction[F, MediaPlaylist](_.show)
+        )
     }
 
     def downloadFullVideo(
@@ -174,9 +174,9 @@ object Acfun {
         playlist: MediaPlaylist,
         outputDir: Path,
         qualityType: QualityType
-    ): Mid[F, Unit] = { fa => fa }
+    ): Middle[F, Unit] = Middle { fa => fa }
 
-    def getAlbumHTML(aa: String): Mid[F, String] = { fa =>
+    def getAlbumHTML(aa: String): Middle[F, String] = Middle { fa =>
       cache.getOrLoad(
         aa + "-album",
         () => fa,
