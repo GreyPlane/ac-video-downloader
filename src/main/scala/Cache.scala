@@ -15,10 +15,10 @@ trait Cache[F[_]] {
 
 object Cache {
 
-  def apply[F[_]: Async: MonadThrow](tempDirPrefix: String): Cache[F] =
+  def apply[F[_]: Async: MonadThrow: Files](tempDirPrefix: String): Cache[F] =
     new FsCache[F](tempDirPrefix)
 
-  private class FsCache[F[_]: Async: MonadThrow](
+  private class FsCache[F[_]: Async: MonadThrow: Files](
       tempDirPrefix: String,
       longRunning: Boolean = false
   ) extends Cache[F] {

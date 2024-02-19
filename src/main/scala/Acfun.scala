@@ -31,7 +31,7 @@ trait Acfun[F[_]] {
 object Acfun {
   private implicit def applyK: ApplyK[Acfun] = Derive.applyK[Acfun]
 
-  private def resolveTideSymbol[F[_]: Async](path: Path): F[Path] = {
+  private def resolveTideSymbol[F[_]: Async: Files](path: Path): F[Path] = {
     if (path.startsWith("~")) {
       val pathStr = path.toString
       Files[F].userHome.map(_ / Path(pathStr.drop(1)))
@@ -40,14 +40,16 @@ object Acfun {
     }
   }
 
-  def apply[F[_]: Async: Concurrent: MonadThrow: Console](cookie: Cookie)(
-      implicit cli: Client[F]
+  def apply[F[_]: Async: Concurrent: MonadThrow: Console: Files](
+      cookie: Cookie
+  )(implicit
+      cli: Client[F]
   ): Acfun[F] = {
     val cache: Acfun[Middle[F, *]] = new AcfunCache(Cache[F]("acfun-cache"))
     cache.attach(new Impl[F](cookie))
   }
 
-  private class Impl[F[_]: Async: Concurrent: MonadThrow: Console](
+  private class Impl[F[_]: Async: Concurrent: MonadThrow: Console: Files](
       cookie: Cookie
   )(implicit
       cli: Client[F]
@@ -109,7 +111,7 @@ object Acfun {
         _ <- Files[F]
           .isDirectory(why)
           .ifM(
-            Monad[F].pure(),
+            ().pure[F],
             MonadThrow[F].raiseError(
               UnexpectedResult(s"$outputDir is not a directory")
             )
@@ -119,7 +121,7 @@ object Acfun {
         pipe = Files[F].writeAll(target)
         done <-
           if (exists)
-            Console[F].println(s"$title already downloaded") *> Monad[F].pure()
+            Console[F].println(s"$title already downloaded") *> ().pure[F]
           else
             Console[F].println(s"start downloading $title") *> videoStream
               .through(pipe)
