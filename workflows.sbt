@@ -52,7 +52,7 @@ ThisBuild / githubWorkflowBuild := Seq(
 ThisBuild / githubWorkflowBuildPostamble := Seq(
   WorkflowStep.Run(
     commands = List(
-      s"mv target/scala-$${{ matrix.scala }}/ac-video-downloader-out.exe ./ac-video-downloader.exe"
+      s"mv target/scala-2.13/ac-video-downloader-out.exe ./ac-video-downloader.exe"
     ),
     name = Some("Move Artifact")
   ),
