@@ -66,4 +66,14 @@ ThisBuild / githubWorkflowBuildPostamble := Seq(
   )
 )
 
+ThisBuild / githubWorkflowGeneratedCI ~= {
+  _.map(job =>
+    job.id match {
+      case "build" =>
+        job.copy(permissions = Some(Permissions.WriteAll))
+      case _ => job
+    }
+  )
+}
+
 ThisBuild / githubWorkflowPublishTargetBranches := Seq.empty

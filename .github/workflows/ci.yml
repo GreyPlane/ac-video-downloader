@@ -26,6 +26,7 @@ jobs:
         scala: [2.13.8]
         java: [temurin@17]
     runs-on: ${{ matrix.os }}
+    permissions: write-all
     steps:
       - name: Ignore line ending differences in git
         if: contains(runner.os, 'windows')
