@@ -41,8 +41,7 @@ lazy val `ac-video-downloader` = project
       "co.fs2" %%% "fs2-io" % fs2Version,
       "org.typelevel" %%% "log4cats-core" % "2.6.0",
       "org.typelevel" %%% "log4cats-noop" % "2.6.0",
-//      "org.http4s" %%% "http4s-curl" % "0.2.0"
-//      "com.armanbilge" %%% "epollcat" % "0.1.4"
+      "org.http4s" %%% "http4s-curl" % "0.2.0"
     ),
     // defaults set with common options shown
     nativeConfig ~= { c =>

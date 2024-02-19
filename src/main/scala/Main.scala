@@ -8,15 +8,13 @@ import fs2.io.file.{Files, Path}
 import interop._
 import org.http4s._
 import org.http4s.client._
+import org.http4s.curl.CurlApp
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.headers._
-import org.typelevel.log4cats.LoggerFactory
-import org.typelevel.log4cats.noop.NoOpFactory
 
-object Main extends IOApp {
+object Main extends CurlApp {
 
   private def useIOClient[B](f: Client[IO] => IO[B]): IO[B] = {
-    implicit val loggerFactory: LoggerFactory[IO] = NoOpFactory.impl[IO]
 
     EmberClientBuilder
       .default[IO]
