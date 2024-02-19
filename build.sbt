@@ -1,8 +1,8 @@
-scalaVersion := "2.13.8"
+ThisBuild / scalaVersion := "2.13.8"
 
 enablePlugins(ScalaNativePlugin)
 
-val http4sVersion = "0.23.18"
+val http4sVersion = "0.23.25"
 val fs2Version = "3.10-365636d"
 val tofuVersion = "0.12.0.1"
 val circeVersion = "0.14.6"
@@ -12,6 +12,7 @@ val catsEffectVersion = "3.6-c7ca678"
 val vcpkgBaseDir = "C:/vcpkg/"
 
 ThisBuild / scalacOptions ++= Seq(
+  "-deprecation",
   "-P:kind-projector:underscore-placeholders"
 )
 
@@ -39,8 +40,8 @@ lazy val `ac-video-downloader` = project
       "co.fs2" %%% "fs2-core" % fs2Version,
       "co.fs2" %%% "fs2-io" % fs2Version,
       "org.typelevel" %%% "log4cats-core" % "2.6.0",
-      "org.typelevel" %%% "log4cats-noop" % "2.6.0"
-//      "org.http4s" %%% "http4s-curl" % "0.2.0",
+      "org.typelevel" %%% "log4cats-noop" % "2.6.0",
+//      "org.http4s" %%% "http4s-curl" % "0.2.0"
 //      "com.armanbilge" %%% "epollcat" % "0.1.4"
     ),
     // defaults set with common options shown
