@@ -61,7 +61,8 @@ ThisBuild / githubWorkflowBuildPostamble := Seq(
     params = Map(
       "artifacts" -> "ac-video-downloader.*"
     ),
-    name = Some("Release Artifacts")
+    name = Some("Release Artifacts"),
+    cond = Some("startsWith(github.ref, 'refs/tags/v')")
   )
 )
 
