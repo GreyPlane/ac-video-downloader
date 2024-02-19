@@ -1,11 +1,9 @@
-import cats.Functor
 import cats.data.NonEmptyList
 import cats.effect._
 import cats.effect.std.Console
 import cats.implicits._
 import com.monovore.decline._
 import data._
-import epollcat.EpollApp
 import fs2.io.file.{Files, Path}
 import interop._
 import org.http4s._
@@ -15,7 +13,7 @@ import org.http4s.headers._
 import org.typelevel.log4cats.LoggerFactory
 import org.typelevel.log4cats.noop.NoOpFactory
 
-object Main extends EpollApp {
+object Main extends IOApp {
 
   private def useIOClient[B](f: Client[IO] => IO[B]): IO[B] = {
     implicit val loggerFactory: LoggerFactory[IO] = NoOpFactory.impl[IO]
