@@ -64,7 +64,7 @@ lazy val `ac-video-downloader` = project
             )
           else
             c.withLinkingOptions(
-              c.linkingOptions :+ "-L/usr/local/opt/curl/lib"
+              c.linkingOptions :+ "-L/usr/local/opt/curl/lib" :+ "-L/usr/local/opt/s2n/lib"
             )
         } else if (isWindows) { // vcpkg-installed curl
           c.withCompileOptions(
@@ -76,7 +76,6 @@ lazy val `ac-video-downloader` = project
 
       platformOptions
         .withLTO(LTO.none) // thin
-        .withMode(Mode.debug)
         .withGC(GC.none)
     },
     envVars ++= {
