@@ -1,15 +1,15 @@
+import cats.MonadThrow
 import cats.data.Kleisli
 import cats.effect._
 import cats.effect.std.Console
 import cats.implicits._
 import cats.tagless.{ApplyK, Derive}
-import cats.{Monad, MonadThrow}
 import data.{QualityType, UnexpectedResult}
 import fs2.io.file.{Files, Path}
 import m3u8.MediaPlaylist
 import org.http4s._
 import org.http4s.client.Client
-import org.http4s.headers.{Accept, Cookie}
+import org.http4s.headers.{Accept, Cookie, `User-Agent`}
 import org.typelevel.ci.CIStringSyntax
 
 trait Acfun[F[_]] {
@@ -30,6 +30,12 @@ trait Acfun[F[_]] {
 
 object Acfun {
   private implicit def applyK: ApplyK[Acfun] = Derive.applyK[Acfun]
+
+  private val userAgent = `User-Agent`(
+    ProductId(
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    )
+  )
 
   private def resolveTideSymbol[F[_]: Async: Files](path: Path): F[Path] = {
     if (path.startsWith("~")) {
@@ -61,9 +67,12 @@ object Acfun {
         Request[F](Method.GET, uri)
           .addHeader(cookie)
           .addHeader(Accept(MediaRange.`text/*`))
+          .putHeaders(userAgent)
       }
 
-      request.liftTo[F].flatMap(cli.expect[String])
+      request
+        .liftTo[F]
+        .flatMap(cli.expect[String])
     }
 
     def getPlaylist(ac: String, url: Uri): F[MediaPlaylist] = {
@@ -142,6 +151,7 @@ object Acfun {
               "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0."
             )
           )
+          .putHeaders(userAgent)
       }
 
       request.liftTo[F].flatMap(cli.expect[String])

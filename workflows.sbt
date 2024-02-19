@@ -35,10 +35,9 @@ ThisBuild / githubWorkflowBuildPreamble ++= Seq(
     List(
       "vcpkg integrate install",
       "vcpkg install --triplet x64-windows curl",
-      "vcpkg install --triplet x64-windows s2n",
       """cp "C:\vcpkg\installed\x64-windows\lib\libcurl.lib" "C:\vcpkg\installed\x64-windows\lib\curl.lib""""
     ),
-    name = Some("Install libcurl and libs2n (windows)"),
+    name = Some("Install libcurl (windows)"),
     cond = Some("startsWith(matrix.os, 'windows')")
   )
 )

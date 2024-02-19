@@ -26,7 +26,6 @@ lazy val `ac-video-downloader` = project
   .settings(
     libraryDependencies ++= Seq(
       "com.monovore" %%% "decline" % "2.4.1",
-      "org.http4s" %%% "http4s-ember-client" % http4sVersion,
       "org.http4s" %%% "http4s-dsl" % http4sVersion,
       "org.http4s" %%% "http4s-circe" % http4sVersion,
       "io.circe" %%% "circe-generic" % circeVersion,
@@ -60,11 +59,11 @@ lazy val `ac-video-downloader` = project
         else if (isMacOs) { // brew-installed curl
           if (isArm)
             c.withLinkingOptions(
-              c.linkingOptions :+ "-L/opt/homebrew/opt/curl/lib" :+ "-L/opt/homebrew/opt/s2n/lib"
+              c.linkingOptions :+ "-L/opt/homebrew/opt/curl/lib"
             )
           else
             c.withLinkingOptions(
-              c.linkingOptions :+ "-L/usr/local/opt/curl/lib" :+ "-L/usr/local/opt/s2n/lib"
+              c.linkingOptions :+ "-L/usr/local/opt/curl/lib"
             )
         } else if (isWindows) { // vcpkg-installed curl
           c.withCompileOptions(

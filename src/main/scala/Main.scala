@@ -6,28 +6,11 @@ import com.monovore.decline._
 import data._
 import fs2.io.file.{Files, Path}
 import interop._
-import org.http4s._
-import org.http4s.client._
+import org.http4s.client.Client
 import org.http4s.curl.CurlApp
-import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.headers._
 
 object Main extends CurlApp {
-
-  private def useIOClient[B](f: Client[IO] => IO[B]): IO[B] = {
-
-    EmberClientBuilder
-      .default[IO]
-      .withUserAgent(
-        `User-Agent`(
-          ProductId(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-          )
-        )
-      )
-      .build
-      .use(f)
-  }
 
   private def readCookie(path: Path) = Files[IO]
     .readUtf8(path)
@@ -92,57 +75,57 @@ object Main extends CurlApp {
       cookiesOpts,
       parallelismOpts
     ).mapN { case (output, input, qualityType, cookiesPath, parallelism) =>
-      useIOClient { implicit client =>
-        readCookie(cookiesPath)
-          .flatMap(cookie => {
-            val acfun = Acfun[IO](cookie)
+      implicit val ioClient: Client[IO] = curlClient
 
-            def downloadVideo(ac: String) = for {
-              pageHTML <- acfun.getPageHTML(ac)
-              PageInfo(title, videoInfos, _) <- PageInfo
-                .fromPageHTML(pageHTML)
-                .liftTo[IO]
-              videoInfo <- videoInfos
-                .find(_.qualityType == qualityType)
-                .liftTo[IO][Throwable](
-                  UnexpectedResult(s"video $ac has no $qualityType available")
-                )
-              playlist <- acfun.getPlaylist(ac, videoInfo.url)
-              done <- acfun.downloadFullVideo(
-                title,
-                videoInfo.url,
-                playlist,
-                output,
-                qualityType
+      readCookie(cookiesPath)
+        .flatMap(cookie => {
+          val acfun = Acfun[IO](cookie)
+
+          def downloadVideo(ac: String) = for {
+            pageHTML <- acfun.getPageHTML(ac)
+            PageInfo(title, videoInfos, _) <- PageInfo
+              .fromPageHTML(pageHTML)
+              .liftTo[IO]
+            videoInfo <- videoInfos
+              .find(_.qualityType == qualityType)
+              .liftTo[IO][Throwable](
+                UnexpectedResult(s"video $ac has no $qualityType available")
               )
-            } yield done
+            playlist <- acfun.getPlaylist(ac, videoInfo.url)
+            done <- acfun.downloadFullVideo(
+              title,
+              videoInfo.url,
+              playlist,
+              output,
+              qualityType
+            )
+          } yield done
 
-            def downloadVideos(acs: NonEmptyList[String]) =
-              Concurrent[IO].parTraverseN(parallelism)(acs)(
-                downloadVideo
-              ) *> IO.unit
+          def downloadVideos(acs: NonEmptyList[String]) =
+            Concurrent[IO].parTraverseN(parallelism)(acs)(
+              downloadVideo
+            ) *> IO.unit
 
-            val done = input match {
-              case InputConfig.Album(albumAcNum) => {
-                for {
-                  albumHTML <- acfun.getAlbumHTML(albumAcNum)
-                  AlbumInfo(contentInfos) <- AlbumInfo
-                    .fromAlbumHTML(albumHTML)
-                    .liftTo[IO]
-                  done <- downloadVideos(
-                    contentInfos.map(info => s"ac${info.resourceId}")
-                  )
-                } yield done
+          val done = input match {
+            case InputConfig.Album(albumAcNum) => {
+              for {
+                albumHTML <- acfun.getAlbumHTML(albumAcNum)
+                AlbumInfo(contentInfos) <- AlbumInfo
+                  .fromAlbumHTML(albumHTML)
+                  .liftTo[IO]
+                done <- downloadVideos(
+                  contentInfos.map(info => s"ac${info.resourceId}")
+                )
+              } yield done
 
-              }
-              case InputConfig.Video(videoAcNums) => {
-                downloadVideos(videoAcNums)
-              }
             }
+            case InputConfig.Video(videoAcNums) => {
+              downloadVideos(videoAcNums)
+            }
+          }
 
-            done *> ExitCode.Success.pure[IO]
-          })
-      }
+          done *> ExitCode.Success.pure[IO]
+        })
     }
 
   }

@@ -78,13 +78,12 @@ jobs:
           curl-config --protocols
           echo "LD_LIBRARY_PATH=/usr/local/lib/" >> $GITHUB_ENV
 
-      - name: Install libcurl and libs2n (windows)
+      - name: Install libcurl (windows)
         if: startsWith(matrix.os, 'windows')
         shell: bash
         run: |
           vcpkg integrate install
           vcpkg install --triplet x64-windows curl
-          vcpkg install --triplet x64-windows s2n
           cp "C:\vcpkg\installed\x64-windows\lib\libcurl.lib" "C:\vcpkg\installed\x64-windows\lib\curl.lib"
 
       - name: Check that workflows are up to date
