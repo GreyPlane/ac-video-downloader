@@ -5,12 +5,11 @@ import cats.implicits._
 import com.monovore.decline._
 import data._
 import fs2.io.file.{Files, Path}
-import interop._
 import org.http4s.client.Client
-import org.http4s.curl.CurlApp
 import org.http4s.headers._
+import interop._
 
-object Main extends CurlApp {
+object Application {
 
   private def readCookie(path: Path) = Files[IO]
     .readUtf8(path)
@@ -19,7 +18,7 @@ object Main extends CurlApp {
     .map(Cookie.parse)
     .flatMap(_.liftTo[IO])
 
-  private def main: Opts[IO[ExitCode]] = {
+  private def main(implicit client: Client[IO]): Opts[IO[ExitCode]] = {
     val outputOpts = Opts.option[Path](
       long = "output",
       help = "downloaded video will be here",
@@ -75,8 +74,6 @@ object Main extends CurlApp {
       cookiesOpts,
       parallelismOpts
     ).mapN { case (output, input, qualityType, cookiesPath, parallelism) =>
-      implicit val ioClient: Client[IO] = curlClient
-
       readCookie(cookiesPath)
         .flatMap(cookie => {
           val acfun = Acfun[IO](cookie)
@@ -109,14 +106,14 @@ object Main extends CurlApp {
           val done = input match {
             case InputConfig.Album(albumAcNum) => {
               for {
-                albumHTML <- acfun.getAlbumHTML(albumAcNum)
-                AlbumInfo(contentInfos) <- AlbumInfo
-                  .fromAlbumHTML(albumHTML)
-                  .liftTo[IO]
-                done <- downloadVideos(
+                AlbumInfo(contentInfos) <- acfun.getAlbumInfo(albumAcNum)
+                _ <- Console[IO].println(
+                  s"Found total ${contentInfos.length} videos in the album"
+                )
+                _ <- downloadVideos(
                   contentInfos.map(info => s"ac${info.resourceId}")
                 )
-              } yield done
+              } yield ()
 
             }
             case InputConfig.Video(videoAcNums) => {
@@ -130,7 +127,7 @@ object Main extends CurlApp {
 
   }
 
-  def run(args: List[String]): IO[ExitCode] = {
+  def run(args: List[String])(implicit client: Client[IO]): IO[ExitCode] = {
     val cmd = Command(
       "AC Video Download",
       "download video through ac number or album number",

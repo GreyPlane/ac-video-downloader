@@ -1,10 +1,5 @@
-ThisBuild / scalaVersion := "2.13.8"
-
-enablePlugins(ScalaNativePlugin)
-
-val http4sVersion = "0.23.25"
+val http4sVersion = "0.23.26"
 val fs2Version = "3.10-365636d"
-val tofuVersion = "0.12.0.1"
 val circeVersion = "0.14.6"
 val catsTaglessVersion = "0.14.0"
 val catsEffectVersion = "3.6-c7ca678"
@@ -12,8 +7,10 @@ val catsEffectVersion = "3.6-c7ca678"
 val vcpkgBaseDir = "C:/vcpkg/"
 
 ThisBuild / scalacOptions ++= Seq(
-  "-deprecation",
-  "-P:kind-projector:underscore-placeholders"
+  "-deprecation"
+)
+ThisBuild / javacOptions ++= Seq(
+  "-Xmx2048"
 )
 
 logLevel := Level.Info
@@ -21,12 +18,14 @@ logLevel := Level.Info
 // import to add Scala Native options
 import scala.scalanative.build._
 
-lazy val `ac-video-downloader` = project
-  .in(file("."))
+lazy val `ac-video-downloader` = crossProject(JVMPlatform, NativePlatform)
   .settings(
+    scalaVersion := "2.13.13",
     libraryDependencies ++= Seq(
       "com.monovore" %%% "decline" % "2.4.1",
       "org.http4s" %%% "http4s-dsl" % http4sVersion,
+      "org.http4s" %%% "http4s-circe" % http4sVersion,
+      "org.http4s" %%% "http4s-ember-client" % http4sVersion,
       "org.http4s" %%% "http4s-circe" % http4sVersion,
       "io.circe" %%% "circe-generic" % circeVersion,
       "io.circe" %%% "circe-generic-extras" % "0.14.3",
@@ -39,10 +38,15 @@ lazy val `ac-video-downloader` = project
       "co.fs2" %%% "fs2-core" % fs2Version,
       "co.fs2" %%% "fs2-io" % fs2Version,
       "org.typelevel" %%% "log4cats-core" % "2.6.0",
-      "org.typelevel" %%% "log4cats-noop" % "2.6.0",
-      "org.http4s" %%% "http4s-curl" % "0.2.0"
+      "org.typelevel" %%% "log4cats-noop" % "2.6.0"
     ),
-    // defaults set with common options shown
+    addCompilerPlugin(
+      "org.typelevel" % "kind-projector" % "0.13.3" cross CrossVersion.full
+    ),
+    addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
+  )
+  .nativeSettings( // defaults set with common options shown
+    libraryDependencies ++= Seq("org.http4s" %%% "http4s-curl" % "0.2.0"),
     nativeConfig ~= { c =>
       val vcpkgBaseDir = "C:/vcpkg/"
       val osNameOpt = sys.props.get("os.name")
@@ -76,6 +80,9 @@ lazy val `ac-video-downloader` = project
       platformOptions
         .withLTO(LTO.none) // thin
         .withGC(GC.none)
+//      .withTargetTriple("x86_64-pc-windows-msvc19.20.0")
+        .withTargetTriple("arm64-apple-macosx14.0.0")
+        .withMode(Mode.debug)
     },
     envVars ++= {
       if (sys.props.get("os.name").exists(_.toLowerCase().contains("windows")))
@@ -83,25 +90,6 @@ lazy val `ac-video-downloader` = project
           "PATH" -> s"${sys.props.getOrElse("PATH", "")};${vcpkgBaseDir}/installed/x64-windows/bin/"
         )
       else Map.empty[String, String]
-    },
-    addCompilerPlugin(
-      "org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full
-    ),
-    addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
+    }
   )
-
-lazy val sandboxM1 = project
-  .in(file("sandboxM1"))
-  .settings(
-    nativeConfig ~= (_.withTargetTriple("x86_64-apple-darwin20.6.0")
-      .withMode(Mode.debug))
-  )
-  .aggregate(`ac-video-downloader`)
-
-lazy val sandboxWin32 = project
-  .in(file("sandboxWin32"))
-  .settings(
-    nativeConfig ~= (_.withTargetTriple("x86_64-pc-windows-msvc19.20.0")
-      .withMode(Mode.release))
-  )
-  .aggregate(`ac-video-downloader`)
+  .jvmSettings(fork := true)

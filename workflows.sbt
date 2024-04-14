@@ -44,7 +44,7 @@ ThisBuild / githubWorkflowBuildPreamble ++= Seq(
 
 ThisBuild / githubWorkflowBuild := Seq(
   WorkflowStep.Sbt(
-    commands = List("sandboxWin32 / nativeLink"),
+    commands = List("ac-video-downloader / nativeLink"),
     name = Some("Build Win32 Artifact")
   )
 )
@@ -52,7 +52,7 @@ ThisBuild / githubWorkflowBuild := Seq(
 ThisBuild / githubWorkflowBuildPostamble := Seq(
   WorkflowStep.Run(
     commands = List(
-      s"mv target/scala-2.13/ac-video-downloader-out.exe ./ac-video-downloader.exe"
+      s"mv /ac-video-downloader/native/target/scala-2.13/ac-video-downloader-out.exe ./ac-video-downloader.exe"
     ),
     name = Some("Move Artifact")
   ),
