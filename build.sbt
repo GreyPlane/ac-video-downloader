@@ -82,7 +82,7 @@ lazy val `ac-video-downloader` = crossProject(JVMPlatform, NativePlatform)
         .withGC(GC.none)
         .withTargetTriple("x86_64-pc-windows-msvc19.20.0")
 //        .withTargetTriple("arm64-apple-macosx14.0.0")
-        .withMode(Mode.debug)
+        .withMode(Mode.release)
     },
     envVars ++= {
       if (sys.props.get("os.name").exists(_.toLowerCase().contains("windows")))
