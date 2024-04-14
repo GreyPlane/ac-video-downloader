@@ -1,8 +1,8 @@
-# ac-video-downloader
+# Ac-video-downloader
 
-Acfun视频下载器，可以通过视频ac号或者合辑（目前只会下载第一页）的ac号批量下载视频。
+Acfun视频下载器，可以通过视频ac号或者合辑页的ac号批量下载视频。
 
-# usage
+# Usage
 
 需要先在和程序平级的目录新建一个文件，文件名为`cookies`，然后通过浏览器调试工具，随便找一个a站的请求，将请求头里的Cookie字段的内容全部复制进文件里。
 
