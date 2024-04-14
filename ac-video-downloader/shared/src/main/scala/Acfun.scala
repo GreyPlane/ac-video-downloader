@@ -1,21 +1,26 @@
 import cats.MonadThrow
-import cats.data.Kleisli
+import cats.data.{Kleisli, NonEmptyList}
 import cats.effect._
 import cats.effect.std.Console
 import cats.implicits._
 import cats.tagless.{ApplyK, Derive}
-import data.{QualityType, UnexpectedResult}
+import data.AlbumInfo.ContentInfo
+import data.{AlbumInfo, QualityType, UnexpectedResult}
 import fs2.io.file.{Files, Path}
+import io.circe.{Json, JsonObject}
 import m3u8.MediaPlaylist
 import org.http4s._
 import org.http4s.client.Client
-import org.http4s.headers.{Accept, Cookie, `User-Agent`}
-import org.typelevel.ci.CIStringSyntax
+import org.http4s.headers.{Accept, Cookie, `Content-Type`, `User-Agent`}
+import org.http4s.implicits._
+import org.typelevel.ci._
+import org.http4s.circe._
+import io.circe.generic.auto._
 
 trait Acfun[F[_]] {
   def getPageHTML(ac: String): F[String]
 
-  def getAlbumHTML(aa: String): F[String]
+  def getAlbumInfo(aa: String): F[AlbumInfo]
 
   def getPlaylist(ac: String, url: Uri): F[MediaPlaylist]
 
@@ -45,6 +50,12 @@ object Acfun {
       path.pure[F]
     }
   }
+
+  private case class AlbumResponse(
+      pageCount: Long,
+      totalSize: Long,
+      contents: List[ContentInfo]
+  )
 
   def apply[F[_]: Async: Concurrent: MonadThrow: Console: Files](
       cookie: Cookie
@@ -139,22 +150,47 @@ object Acfun {
       } yield done
     }
 
-    def getAlbumHTML(aa: String): F[String] = {
-      val request = for {
-        uri <- Uri.fromString(s"https://www.acfun.cn/a/$aa")
-      } yield {
-        Request[F](Method.GET, uri)
-          .addHeader(cookie)
-          .putHeaders(
-            Header.Raw(
-              ci"accept",
-              "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0."
+    def getAlbumInfo(aa: String): F[AlbumInfo] = {
+      val pageSize = 30
+
+      def albumRestAPIUri =
+        uri"https://www.acfun.cn/rest/pc-direct/arubamu/content/list"
+          .withQueryParam("size", pageSize)
+          .withQueryParam("arubamuId", aa.stripPrefix("aa"))
+
+      def go(
+          contents: List[ContentInfo],
+          page: Int = 1
+      ): F[List[ContentInfo]] = {
+        val request = Request[F](
+          Method.GET,
+          albumRestAPIUri
+            .withQueryParam(
+              "page",
+              page
             )
-          )
+        )
+          .addHeader(cookie)
+          .putHeaders(`Content-Type`(MediaType.application.json))
           .putHeaders(userAgent)
+
+        cli.expect(request)(jsonOf[F, AlbumResponse]).flatMap {
+          case AlbumResponse(_, totalSize, data) =>
+            val totalPage = math.ceil(totalSize.toDouble / pageSize)
+            if (page < totalPage) {
+              go(contents ++ data, page + 1)
+            } else {
+              (contents ++ data).pure[F]
+            }
+        }
       }
 
-      request.liftTo[F].flatMap(cli.expect[String])
+      go(List.empty).flatMap(contentInfos =>
+        NonEmptyList
+          .fromList(contentInfos)
+          .map(AlbumInfo.apply)
+          .liftTo[F](UnexpectedResult("Empty album"))
+      )
     }
   }
 
@@ -188,14 +224,7 @@ object Acfun {
         qualityType: QualityType
     ): Middle[F, Unit] = Middle { fa => fa }
 
-    def getAlbumHTML(aa: String): Middle[F, String] = Middle { fa =>
-      cache.getOrLoad(
-        aa + "-album",
-        () => fa,
-        Kleisli { _.pure[F] },
-        Kleisli { _.pure[F] }
-      )
-    }
+    def getAlbumInfo(aa: String): Middle[F, AlbumInfo] = Middle { fa => fa }
   }
 
 }

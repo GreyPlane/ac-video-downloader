@@ -9,7 +9,7 @@ case class Middle[F[_], A](attach: F[A] => F[A]) extends (F[A] => F[A]) {
 }
 
 object Middle extends MiddleInstances {
-  def attach[F[_], Alg[_[_]]: ApplyK](algMid: Alg[Middle[F, _]])(
+  def attach[F[_], Alg[_[_]]: ApplyK](algMid: Alg[Middle[F, *]])(
       alg: Alg[F]
   ): Alg[F] = algMid.map2K(alg)(
     Lambda[Tuple2K[Middle[F, *], F, *] ~> F](t2k =>
@@ -18,7 +18,7 @@ object Middle extends MiddleInstances {
   )
 
   implicit final class MiddleAlgebraSyntax[F[_], Alg[_[_]]](
-      val algMid: Alg[Middle[F, _]]
+      val algMid: Alg[Middle[F, *]]
   ) extends AnyVal {
     def attach(alg: Alg[F])(implicit apK: ApplyK[Alg]): Alg[F] =
       Middle.attach(algMid)(alg)
