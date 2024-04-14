@@ -97,7 +97,10 @@ jobs:
 
       - name: Move Artifact
         shell: bash
-        run: mv /ac-video-downloader/native/target/scala-2.13/ac-video-downloader-out.exe ./ac-video-downloader.exe
+        run: |
+          ls /ac-video-downloader/native/target
+          ls /ac-video-downloader/native/target/scala-2.13
+          mv /ac-video-downloader/native/target/scala-2.13/ac-video-downloader-out.exe ./ac-video-downloader.exe
 
       - name: Release Artifacts
         if: startsWith(github.ref, 'refs/tags/v')

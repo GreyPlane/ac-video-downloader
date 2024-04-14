@@ -52,6 +52,8 @@ ThisBuild / githubWorkflowBuild := Seq(
 ThisBuild / githubWorkflowBuildPostamble := Seq(
   WorkflowStep.Run(
     commands = List(
+      s"ls /ac-video-downloader/native/target",
+      s"ls /ac-video-downloader/native/target/scala-2.13",
       s"mv /ac-video-downloader/native/target/scala-2.13/ac-video-downloader-out.exe ./ac-video-downloader.exe"
     ),
     name = Some("Move Artifact")
